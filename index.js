@@ -50,9 +50,7 @@ const buildClient = async (conf) => {
     keyPair 
   })
 
-  const client = rpc.connect(conf.peer)
-
-  return { client, rpc }
+  return { rpc }
 }
 
 class RpcFacility extends Base {
@@ -85,12 +83,11 @@ class RpcFacility extends Base {
           case 'client':
             {
               const built = await buildClient(_.pick(
-                this.opts,
-                ['peer', 'idFile']
+                this.conf,
+                ['idFile']
               ))
 
               this.rpc = built.rpc
-              this.client = built.client
             }
             break
           default:
@@ -107,9 +104,6 @@ class RpcFacility extends Base {
         switch (this.mode) {
           case 'server':
             await this.server.end()
-            break
-          case 'client':
-            await this.client.end()
             break
         }
 
