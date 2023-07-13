@@ -85,8 +85,8 @@ class RpcFacility extends Base {
           case 'client':
             {
               const built = await buildClient(_.pick(
-                this.conf,
-                ['peer', 'keyPair']
+                this.opts,
+                ['peer', 'idFile']
               ))
 
               this.rpc = built.rpc
