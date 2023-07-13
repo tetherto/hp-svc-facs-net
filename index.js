@@ -8,11 +8,19 @@ const libKeys = require('@hyper-cmd/lib-keys')
 const { promisify } = require('util')
 
 const buildServer = async (conf) => {
-  const rpc = new RPC(conf)
+  let allowed = null
+
+  if (conf.allow) {
+    allowed = libKeys.prepKeyList(conf.allow)
+  }
+
+  const rpc = new RPC({
+    seed: conf.seed ? Buffer.from(conf.seed, 'hex') : undefined
+  })
 
   const server = rpc.createServer({
     firewall: (remotePublicKey, remoteHandshakePayload) => {
-      if (conf.allow && !libKeys.checkAllowList(conf.allow, remotePublicKey)) {
+      if (allowed && !libKeys.checkAllowList(allowed, remotePublicKey)) {
         return true
       }
 
@@ -53,7 +61,7 @@ class RpcFacility extends Base {
             {
               const built = await buildServer(_.pick(
                 this.conf,
-                ['seed', 'allowed']
+                ['seed', 'allow']
               ))
 
               this.rpc = built.rpc
