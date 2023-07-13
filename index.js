@@ -4,12 +4,22 @@ const async = require('async')
 const _ = require('lodash')
 const RPC = require('@hyperswarm/rpc')
 const Base = require('bfx-facs-base')
+const libKeys = require('@hyper-cmd/lib-keys')
 const { promisify } = require('util')
 
 const buildServer = async (conf) => {
   const rpc = new RPC(conf)
 
-  const server = rpc.createServer()
+  const server = rpc.createServer({
+    firewall: (remotePublicKey, remoteHandshakePayload) => {
+      if (conf.allow && !libKeys.checkAllowList(conf.allow, remotePublicKey)) {
+        return true
+      }
+
+      return false
+    }
+  })
+
   await server.listen()
 
   return { rpc, server }
@@ -43,7 +53,7 @@ class RpcFacility extends Base {
             {
               const built = await buildServer(_.pick(
                 this.conf,
-                ['seed']
+                ['seed', 'allowed']
               ))
 
               this.rpc = built.rpc
