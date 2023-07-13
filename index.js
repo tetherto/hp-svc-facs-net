@@ -34,7 +34,21 @@ const buildServer = async (conf) => {
 }
 
 const buildClient = async (conf) => {
-  const rpc = new RPC()
+  let keyPair = null
+
+  if (conf.idFile) {
+    keyPair = libUtils.resolveIdentity([], conf.idFile)
+
+    if (!keyPair) {
+      throw new Error('ERR_KEYPAIR_FILE_INVALID')
+    }
+
+    keyPair = libKeys.parseKeyPair(keyPair) 
+  }
+
+  const rpc = new RPC({
+    keyPair 
+  })
 
   const client = rpc.connect(conf.peer)
 
@@ -72,7 +86,7 @@ class RpcFacility extends Base {
             {
               const built = await buildClient(_.pick(
                 this.conf,
-                ['peer']
+                ['peer', 'keyPair']
               ))
 
               this.rpc = built.rpc
