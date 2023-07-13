@@ -1,0 +1,34 @@
+{
+  "name": "hp-svc-facs-rpc",
+  "version": "0.0.1",
+  "private": false,
+  "description": "Holepunch SVC Facility RPC",
+  "author": {
+    "name": "prdn",
+    "email": "paolo@tether.to"
+  },
+  "main": "index.js",
+  "keywords": [
+    "bitfinex"
+  ],
+  "dependencies": {
+    "@hyperswarm/rpc": "^3.2.1",
+    "async": "^3.2.1",
+    "bfx-facs-base": "git+https://github.com/bitfinexcom/bfx-facs-base.git",
+    "lodash": "^4.17.21"
+  },
+  "engine": {
+    "node": ">=8.0"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tetherto/hp-svc-facs-rpc.git"
+  },
+  "maintainers": [
+    {
+      "name": "prdn",
+      "email": "paolo@tether.to"
+    }
+  ]
+}
