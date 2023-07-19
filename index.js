@@ -87,8 +87,6 @@ class RpcFacility extends Base {
                 confBee.put('seed', seed)
               }
 
-              console.log('seed', seed.toString('hex'))
-
               _.extend(serverOpts, {
                 seed: seed
               })
