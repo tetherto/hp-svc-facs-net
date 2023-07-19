@@ -15,7 +15,7 @@ const buildServer = async (conf) => {
   }
 
   const rpc = new RPC({
-    seed: conf.seed ? Buffer.from(conf.seed, 'hex') : undefined
+    seed: conf.seed ? conf.seed : undefined
   })
 
   const server = rpc.createServer({
@@ -71,10 +71,29 @@ class RpcFacility extends Base {
         switch (this.mode) {
           case 'server':
             {
-              const built = await buildServer(_.pick(
-                this.conf,
-                ['seed', 'allow']
-              ))
+              const serverOpts = _.pick(this.conf, ['allow'])
+
+              const store = this.caller.store_s0
+
+              let confBee = await store.getBee({ name: 'conf' })
+              await confBee.ready()
+
+              let seed = await confBee.get('seed')
+
+              if (seed) {
+                seed = seed.value
+              } else {
+                seed = libKeys.randomBytes(32)
+                confBee.put('seed', seed)
+              }
+
+              console.log('seed', seed.toString('hex'))
+
+              _.extend(serverOpts, {
+                seed: seed
+              })
+
+              const built = await buildServer(serverOpts)
 
               this.rpc = built.rpc
               this.server = built.server
