@@ -64,6 +64,22 @@ class RpcFacility extends Base {
     this.init()
   }
 
+  _parseInputJSON (data) {
+    data = data.toString()
+
+    try {
+      data = JSON.parse(data)
+    } catch (e) {
+      throw new Error('ERR_DATA_FORMAT')
+    }
+
+    return data
+  }
+
+  _toOutJSON (data) {
+    return Buffer.from(JSON.stringify(data))
+  }
+
   _start (cb) {
     async.series([
       next => { super._start(next) },
