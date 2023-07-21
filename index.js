@@ -131,12 +131,6 @@ class RpcFacility extends Base {
           default:
             throw new Error('ERR_MODE_UNDEFINED')
         }
-
-        if (this.rpc) {
-          this.rpc.on('error', e => {
-            debug(`[RPC]`, e)
-          })
-        }
       }
     ], cb)
   }
