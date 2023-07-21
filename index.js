@@ -64,7 +64,7 @@ class RpcFacility extends Base {
     this.init()
   }
 
-  _parseInputJSON (data) {
+  parseInputJSON (data) {
     data = data.toString()
 
     try {
@@ -76,8 +76,12 @@ class RpcFacility extends Base {
     return data
   }
 
-  _toOutJSON (data) {
+  toOutJSON (data) {
     return Buffer.from(JSON.stringify(data))
+  }
+
+  toOut (data) {
+    return Buffer.from(data.toString())
   }
 
   _start (cb) {
