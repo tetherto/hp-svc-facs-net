@@ -5,8 +5,8 @@ const _ = require('lodash')
 const RPC = require('@hyperswarm/rpc')
 const Base = require('bfx-facs-base')
 const libKeys = require('@hyper-cmd/lib-keys')
-const { promisify } = require('util')
-const debug = require('debug')('facs-rpc')
+const libUtils = require('@hyper-cmd/lib-utils')
+const debug = require('debug')('hp:rpc')
 
 const buildServer = async (conf) => {
   let allowed = null
