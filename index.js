@@ -72,7 +72,7 @@ class NetFacility extends Base {
       return
     }
 
-    this.startRpc()
+    await this.startRpc()
 
     const server = this.rpc.createServer({
       firewall: this.buildFirewall(this.conf.allow)
@@ -106,7 +106,7 @@ class NetFacility extends Base {
       dht: this.dht
     })
 
-    this.swarm
+    this.swarm = swarm
   }
 
   _start (cb) {
