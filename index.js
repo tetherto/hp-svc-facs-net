@@ -68,7 +68,7 @@ class NetFacility extends Base {
   }
 
   async startRpcServer () {
-    if (this.server) {
+    if (this.rpcServer) {
       return
     }
 
@@ -80,7 +80,7 @@ class NetFacility extends Base {
 
     await server.listen()
 
-    this.server = server
+    this.rpcServer = server
   }
 
   async startRpc () {
@@ -125,8 +125,8 @@ class NetFacility extends Base {
     async.series([
       next => { super._stop(next) },
       async () => {
-        if (this.server) {
-          await this.server.end()
+        if (this.rpcServer) {
+          await this.rpcServer.end()
         }
 
         if (this.rpc) {
