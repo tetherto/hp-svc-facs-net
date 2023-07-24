@@ -114,7 +114,7 @@ class NetFacility extends Base {
       next => { super._start(next) },
       async () => {
         const seed = await this.getSeed('seedDht')
-        const keyPair = DHT.seed(seed)
+        const keyPair = DHT.keyPair(seed)
 
         this.dht = new DHT({ keyPair })
       }
