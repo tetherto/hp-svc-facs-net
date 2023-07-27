@@ -42,7 +42,10 @@ class NetFacility extends Base {
   async getSeed (name) {
     const store = this.caller.store_s0
 
-    const confBee = await store.getBee({ name: 'conf' })
+    const confBee = await store.getBee(
+      { name: 'storeConf' },
+      { keyEncoding: 'utf-8' }
+    )
     await confBee.ready()
 
     let seed = await confBee.get(name)
@@ -51,7 +54,7 @@ class NetFacility extends Base {
       seed = seed.value
     } else {
       seed = libKeys.randomBytes(32)
-      confBee.put(name, seed)
+      await confBee.put(name, seed)
     }
 
     return seed
