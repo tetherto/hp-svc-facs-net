@@ -47,7 +47,7 @@ class NetFacility extends Base {
     }
 
     try {
-      const res = this.caller[met](data)
+      const res = await this.caller[met](data)
       return this.toOutJSON(res)
     } catch (e) {
       return this.toOutJSON(`[HRPC_ERR]=${e.message}`)
