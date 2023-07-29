@@ -39,6 +39,16 @@ class NetFacility extends Base {
     return Buffer.from(data.toString())
   }
 
+  async handleReply (met, data) {
+    try {
+      data = this.parseInputJSON(data)
+    } catch (e) {
+      return this.toOut(e.message)
+    }
+
+    return this.caller[met](data)
+  }
+
   async getSeed (name) {
     const store = this.caller.store_s0
 
