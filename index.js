@@ -43,7 +43,7 @@ class NetFacility extends Base {
     try {
       data = this.parseInputJSON(data)
     } catch (e) {
-      return this.toOut(e.message)
+      return this.toOutJSON(`[HRPC_ERR]=${e.message}`)
     }
 
     try {
