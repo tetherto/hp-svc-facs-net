@@ -46,7 +46,9 @@ class NetFacility extends Base {
       return this.toOut(e.message)
     }
 
-    return this.caller[met](data)
+    const res = this.caller[met](data)
+
+    return this.toOutJSON(res)
   }
 
   async getSeed (name) {
