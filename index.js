@@ -24,7 +24,7 @@ class NetFacility extends Base {
     try {
       data = JSON.parse(data)
     } catch (e) {
-      throw new Error('ERR_DATA_FORMAT')
+      throw new Error('ERR_FACS_NET_DATA_FORMAT')
     }
 
     return data
@@ -36,6 +36,29 @@ class NetFacility extends Base {
 
   toOut (data) {
     return Buffer.from(data.toString())
+  }
+
+  async jRequest (k, m, d) {
+    if (!this.rpc) {
+      throw new Error('ERR_FACS_NET_RPC_NOTFOUND')
+    }
+
+    const res = await this.rpc.request(
+      Buffer.from(k, 'hex'), m,
+      this.toOutJSON(d)
+    )
+    return this.parseInputJSON(res)
+  }
+
+  async jEvent (k, m, d) {
+    if (!this.rpc) {
+      throw new Error('ERR_FACS_NET_RPC_NOTFOUND')
+    }
+
+    await this.rpc.event(
+      Buffer.from(k, 'hex'), m,
+      this.toOutJSON(d)
+    )
   }
 
   async handleReply (met, data) {
