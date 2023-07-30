@@ -12,8 +12,7 @@ class NetFacility extends Base {
   constructor (caller, opts, ctx) {
     super(caller, opts, ctx)
 
-    this.name = 'rpc'
-    this.mode = opts.mode
+    this.name = 'net'
     this._hasConf = true
 
     this.init()
