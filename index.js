@@ -30,6 +30,24 @@ class NetFacility extends Base {
     return data
   }
 
+  handleInputError (data) {
+    if (typeof data !== 'string' && !(data instanceof String)) {
+      return
+    }
+
+    let isErr = false
+
+    if (data.slice(0, 15).includes('[HRPC_ERR]=')) {
+      isErr = true
+    }
+
+    if (!isErr) {
+      return
+    }
+
+    throw new Error(data)
+  }
+
   toOutJSON (data) {
     return Buffer.from(JSON.stringify(data))
   }
@@ -43,11 +61,15 @@ class NetFacility extends Base {
       throw new Error('ERR_FACS_NET_RPC_NOTFOUND')
     }
 
-    const res = await this.rpc.request(
+    let res = await this.rpc.request(
       Buffer.from(k, 'hex'), m,
       this.toOutJSON(d)
     )
-    return this.parseInputJSON(res)
+
+    res = this.parseInputJSON(res)
+    this.handleInputError(res)
+
+    return res
   }
 
   async jEvent (k, m, d) {

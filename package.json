@@ -19,8 +19,7 @@
     "bfx-facs-base": "git+https://github.com/bitfinexcom/bfx-facs-base.git",
     "debug": "^4.3.4",
     "hyperdht": "^6.6.1",
-    "hyperswarm": "^4.5.1",
-    "lodash": "^4.17.21"
+    "hyperswarm": "^4.5.1"
   },
   "engine": {
     "node": ">=8.0"
