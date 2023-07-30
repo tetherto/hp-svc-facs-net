@@ -6,7 +6,7 @@ const Base = require('bfx-facs-base')
 const libKeys = require('@hyper-cmd/lib-keys')
 const DHT = require('hyperdht')
 const Hyperswarm = require('hyperswarm')
-const debug = require('debug')('hp:rpc')
+const debug = require('debug')('hp:net')
 
 class NetFacility extends Base {
   constructor (caller, opts, ctx) {
