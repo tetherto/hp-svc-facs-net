@@ -100,9 +100,10 @@ class NetFacility extends Base {
 
   async getSeed (name) {
     const store = this.caller.store_s0
+    const locId = this.caller.status.locId || '0'
 
     const confBee = await store.getBee(
-      { name: 'storeConf' },
+      { name: `storeConf_${locId}` },
       { keyEncoding: 'utf-8' }
     )
     await confBee.ready()
