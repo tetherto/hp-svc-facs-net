@@ -99,7 +99,7 @@ class NetFacility extends Base {
   }
 
   async getSeed (name) {
-    const store = this.opts.store || this.caller.store_s0
+    const store = this.opts.fac_store || this.caller.store_s0
 
     const confBee = await store.getBee(
       { name: 'storeConf' },
