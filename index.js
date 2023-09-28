@@ -15,6 +15,10 @@ class NetFacility extends Base {
     this.name = 'net'
     this._hasConf = true
 
+    if (!this.opts.timeout) {
+      this.opts.timeout = 30000
+    }
+
     this.init()
   }
 
@@ -56,14 +60,18 @@ class NetFacility extends Base {
     return Buffer.from(data.toString())
   }
 
-  async jRequest (k, m, d, o) {
+  async jRequest (key, method, data, opts = {}) {
     if (!this.rpc) {
       throw new Error('ERR_FACS_NET_RPC_NOTFOUND')
     }
 
+    if (!opts.timeout) {
+      opts.timeout = this.opts.timeout
+    }
+
     let res = await this.rpc.request(
-      Buffer.from(k, 'hex'), m,
-      this.toOutJSON(d), o
+      Buffer.from(key, 'hex'), method,
+      this.toOutJSON(data), opts
     )
 
     res = this.parseInputJSON(res)
