@@ -56,14 +56,14 @@ class NetFacility extends Base {
     return Buffer.from(data.toString())
   }
 
-  async jRequest (k, m, d) {
+  async jRequest (k, m, d, o) {
     if (!this.rpc) {
       throw new Error('ERR_FACS_NET_RPC_NOTFOUND')
     }
 
     let res = await this.rpc.request(
       Buffer.from(k, 'hex'), m,
-      this.toOutJSON(d)
+      this.toOutJSON(d), o
     )
 
     res = this.parseInputJSON(res)
