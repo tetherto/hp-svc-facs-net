@@ -14,12 +14,12 @@
   "dependencies": {
     "@hyper-cmd/lib-keys": "https://github.com/holepunchto/hyper-cmd-lib-keys#v0.0.2",
     "@hyper-cmd/lib-utils": "https://github.com/holepunchto/hyper-cmd-lib-utils#v0.0.2",
-    "@hyperswarm/rpc": "^3.2.1",
+    "@hyperswarm/rpc": "^3.2.2",
     "async": "^3.2.1",
     "bfx-facs-base": "git+https://github.com/bitfinexcom/bfx-facs-base.git",
     "debug": "^4.3.4",
-    "hyperdht": "^6.6.1",
-    "hyperswarm": "^4.5.1"
+    "hyperdht": "^6.9.0",
+    "hyperswarm": "^4.7.3"
   },
   "engine": {
     "node": ">=8.0"
