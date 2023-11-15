@@ -18,8 +18,8 @@
     "async": "^3.2.1",
     "bfx-facs-base": "git+https://github.com/bitfinexcom/bfx-facs-base.git",
     "debug": "^4.3.4",
-    "hyperdht": "^6.9.0",
-    "hyperswarm": "^4.7.3"
+    "hyperdht": "^6.11.0",
+    "hyperswarm": "^4.7.8"
   },
   "engine": {
     "node": ">=8.0"
