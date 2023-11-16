@@ -162,7 +162,8 @@ class NetFacility extends Base {
 
     const rpc = new RPC({
       seed,
-      dht: this.dht
+      dht: this.dht,
+      poolLinger: 300000
     })
 
     this.rpc = rpc
