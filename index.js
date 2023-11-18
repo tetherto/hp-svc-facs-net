@@ -20,7 +20,7 @@ class NetFacility extends Base {
     }
 
     if (!this.opts.poolLinger) {
-      this.opts.poolLinger = 30000
+      this.opts.poolLinger = 300000
     }
 
     this.init()
