@@ -19,6 +19,10 @@ class NetFacility extends Base {
       this.opts.timeout = 30000
     }
 
+    if (!this.opts.poolLinger) {
+      this.opts.poolLinger = 30000
+    }
+
     this.init()
   }
 
@@ -163,7 +167,7 @@ class NetFacility extends Base {
     const rpc = new RPC({
       seed,
       dht: this.dht,
-      poolLinger: 300000
+      poolLinger: this.opts.poolLinger
     })
 
     this.rpc = rpc
