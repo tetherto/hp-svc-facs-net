@@ -6,7 +6,7 @@ const Base = require('bfx-facs-base')
 const libKeys = require('hyper-cmd-lib-keys')
 const DHT = require('hyperdht')
 const Hyperswarm = require('hyperswarm')
-const debug = require('debug')('hp:net')
+const os = require('os')
 
 class NetFacility extends Base {
   constructor (caller, opts, ctx) {
@@ -131,14 +131,35 @@ class NetFacility extends Base {
     return seed
   }
 
-  buildFirewall (allowed) {
+  buildFirewall (allowed, allowLocal = false) {
+    // convert keys to Buffer if string
+    allowed = allowed?.map(k => typeof k === 'string' ? Buffer.from(k, 'hex') : k)
+
+    // if firewall enabled, allow from local ip
+    const localIp = allowLocal ? this.getLocalIPAddress() : null
+
     return (remotePublicKey, remoteHandshakePayload) => {
       if (allowed && !libKeys.checkAllowList(allowed, remotePublicKey)) {
+        if (allowLocal && localIp && remoteHandshakePayload?.addresses4) {
+          for (const remoteHost of remoteHandshakePayload.addresses4) {
+            if (remoteHost.host === localIp) return false
+          }
+        }
+
         return true
       }
 
       return false
     }
+  }
+
+  getLocalIPAddress () {
+    for (const devices of Object.values(os.networkInterfaces())) {
+      const device = devices.find(d => d.family === 'IPv4' && d.address !== '127.0.0.1' && !d.internal)
+      if (device) return device.address
+    }
+
+    return null
   }
 
   async startRpcServer () {
@@ -149,7 +170,7 @@ class NetFacility extends Base {
     await this.startRpc()
 
     const server = this.rpc.createServer({
-      firewall: this.buildFirewall(this.conf.allow)
+      firewall: this.buildFirewall(this.conf.allow, this.conf.allowLocal)
     })
 
     await server.listen()
