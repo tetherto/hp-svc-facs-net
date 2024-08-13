@@ -159,7 +159,7 @@ class NetFacility extends Base {
       if (device) return device.address
     }
 
-    return null
+    return '127.0.0.1'
   }
 
   async startRpcServer () {
