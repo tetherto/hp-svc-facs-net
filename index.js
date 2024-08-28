@@ -162,12 +162,12 @@ class NetFacility extends Base {
     return '127.0.0.1'
   }
 
-  async startRpcServer () {
+  async startRpcServer (keyPair = null) {
     if (this.rpcServer) {
       return
     }
 
-    await this.startRpc()
+    await this.startRpc(keyPair)
 
     const server = this.rpc.createServer({
       firewall: this.buildFirewall(this.conf.allow, this.conf.allowLocal)
@@ -178,18 +178,23 @@ class NetFacility extends Base {
     this.rpcServer = server
   }
 
-  async startRpc () {
+  async startRpc (keyPair) {
     if (this.rpc) {
       return
     }
 
-    const seed = await this.getSeed('seedRpc')
-
-    const rpc = new RPC({
-      seed,
+    const rpcOpts = {
       dht: this.dht,
       poolLinger: this.opts.poolLinger
-    })
+    }
+
+    if (keyPair) {
+      rpcOpts.keyPair = keyPair
+    } else {
+      rpcOpts.seed = await this.getSeed('seedRpc')
+    }
+
+    const rpc = new RPC(rpcOpts)
 
     this.rpc = rpc
   }
