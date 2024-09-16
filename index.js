@@ -222,7 +222,7 @@ class NetFacility extends Base {
       next => { super._stop(next) },
       async () => {
         if (this.rpcServer) {
-          await this.rpcServer.end()
+          await this.rpcServer.close()
         }
 
         if (this.rpc) {
