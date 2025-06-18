@@ -3,10 +3,14 @@
 const crypto = require('crypto')
 const HyperDHT = require('hyperdht')
 const test = require('brittle')
+const sinon = require('sinon')
+const { setTimeout: sleep } = require('timers/promises')
 
 const HyperDHTLookup = require('../lib/hyperdht.lookup')
 
 test('HyperDHTLookup', async (t) => {
+  t.timeout(300000)
+
   const dht = new HyperDHT()
   const dhtKeyPair = dht.defaultKeyPair
   const dhtPublicKey = dht.defaultKeyPair.publicKey.toString('hex')
@@ -16,13 +20,19 @@ test('HyperDHTLookup', async (t) => {
   const lookup = new HyperDHTLookup({
     dht, keyPair: dhtKeyPair
   })
+  lookup.start()
   const lookupSec = new HyperDHTLookup({
     dht, keyPair: dhtKeyPair, crypto: { algo: 'hmac-sha384', key: 'my-secret' }
   })
+  lookupSec.start()
 
   const topic = 'my-topic-' + crypto.randomBytes(64).toString('hex')
 
   t.teardown(async () => {
+    await Promise.all([
+      lookup.stop(),
+      lookupSec.stop()
+    ])
     await dht.destroy()
   })
 
@@ -113,5 +123,60 @@ test('HyperDHTLookup', async (t) => {
     const lookupSecRes = await lookupSec.lookup(topic, false)
     t.is(lookupSecRes.length, 1)
     t.is(lookupSecRes[0], dhtPublicKey)
+  })
+
+  await t.test('interval tests', async (t) => {
+    t.timeout(120000)
+
+    const lookupItv = new HyperDHTLookup({
+      dht, keyPair: dhtKeyPair, announceTTL: 2000
+    })
+
+    const spy = sinon.spy(lookupItv, 'announce')
+    t.teardown(async () => {
+      await lookupItv.stop()
+      spy.restore()
+    })
+
+    t.comment('should announce services from map on interval')
+    lookupItv.start()
+    await lookupItv.announceInterval(topic, otherKeyPair)
+    t.ok(spy.callCount >= 1 && spy.callCount <= 2)
+    t.alike(spy.firstCall.args, [topic, otherKeyPair])
+    await sleep(2200)
+    t.ok(spy.callCount >= 2 && spy.callCount <= 3)
+    t.alike(spy.lastCall.args, [topic, otherKeyPair])
+    await lookupItv.unnannounceInterval(topic, otherKeyPair)
+    t.ok(spy.callCount <= 3)
+    await lookupItv.stop()
+
+    spy.resetHistory()
+
+    t.comment('should fall back to original when key pair is not present')
+    lookupItv.start()
+    await lookupItv.announceInterval(topic)
+    t.ok(spy.callCount >= 1 && spy.callCount <= 2)
+    t.alike(spy.firstCall.args, [topic, dhtKeyPair])
+    await sleep(2200)
+    t.ok(spy.callCount >= 2 && spy.callCount <= 3)
+    t.alike(spy.lastCall.args, [topic, dhtKeyPair])
+    await lookupItv.unnannounceInterval(topic)
+    await sleep(2200)
+    t.ok(spy.callCount <= 3)
+    await lookupItv.stop()
+
+    spy.resetHistory()
+
+    t.comment('should support multiple key pairs for same topic')
+    lookupItv.start()
+    await lookupItv.announceInterval(topic)
+    await lookupItv.announceInterval(topic, otherKeyPair)
+    t.ok(spy.callCount >= 2 && spy.callCount <= 4)
+    await sleep(2200)
+    t.ok(spy.callCount >= 4 && spy.callCount <= 6)
+    t.ok(spy.getCalls().every(c => c.args[0] === topic))
+    t.ok(spy.getCalls().some(c => c.args[1].publicKey.toString('hex') === dhtPublicKey))
+    t.ok(spy.getCalls().some(c => c.args[1].publicKey.toString('hex') === otherPublicKey))
+    await lookupItv.stop()
   })
 })

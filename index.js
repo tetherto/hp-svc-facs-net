@@ -246,6 +246,7 @@ class NetFacility extends Base {
       keyPair: this.rpc._defaultKeyPair,
       ...opts
     })
+    this.lookup.start()
   }
 
   _start (cb) {
@@ -273,6 +274,9 @@ class NetFacility extends Base {
         }
 
         await this.dht.destroy()
+        if (this.lookup) {
+          await this.lookup.stop()
+        }
       }
     ], cb)
   }
