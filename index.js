@@ -8,6 +8,8 @@ const DHT = require('hyperdht')
 const Hyperswarm = require('hyperswarm')
 const os = require('os')
 
+const HyperDHTLookup = require('./lib/hyperdht.lookup')
+
 class NetFacility extends Base {
   constructor (caller, opts, ctx) {
     super(caller, opts, ctx)
@@ -84,6 +86,11 @@ class NetFacility extends Base {
     return res
   }
 
+  async jTopicRequest (topic, method, data, opts = {}, cached = true) {
+    const key = await this.lookupTopicKey(topic, cached)
+    return this.jRequest(key, method, data, opts)
+  }
+
   async jEvent (k, m, d) {
     if (!this.rpc) {
       throw new Error('ERR_FACS_NET_RPC_NOTFOUND')
@@ -93,6 +100,11 @@ class NetFacility extends Base {
       Buffer.from(k, 'hex'), m,
       this.toOutJSON(d)
     )
+  }
+
+  async jTopicEvent (topic, method, data, cached = true) {
+    const key = await this.lookupTopicKey(topic, cached)
+    return this.jEvent(key, method, data)
   }
 
   async handleReply (met, data) {
@@ -162,6 +174,20 @@ class NetFacility extends Base {
     return '127.0.0.1'
   }
 
+  async lookupTopicKey (topic, cached = true) {
+    if (!this.lookup) {
+      throw new Error('ERR_FACS_NET_LOOKUP_NOTFOUND')
+    }
+
+    const keys = await this.lookup.lookup(topic, cached)
+    if (!keys.length) {
+      throw new Error('ERR_TOPIC_LOOKUP_EMPTY')
+    }
+
+    const index = Math.floor(Math.random() * keys.length)
+    return keys[index]
+  }
+
   async startRpcServer (keyPair = null) {
     if (this.rpcServer) {
       return
@@ -210,6 +236,19 @@ class NetFacility extends Base {
     this.swarm = swarm
   }
 
+  startLookup (opts) {
+    if (!this.rpc) {
+      throw new Error('ERR_FACS_NET_RPC_NOTFOUND')
+    }
+
+    this.lookup = new HyperDHTLookup({
+      dht: this.dht,
+      keyPair: this.rpc._defaultKeyPair,
+      ...opts
+    })
+    this.lookup.start()
+  }
+
   _start (cb) {
     async.series([
       next => { super._start(next) },
@@ -235,6 +274,9 @@ class NetFacility extends Base {
         }
 
         await this.dht.destroy()
+        if (this.lookup) {
+          await this.lookup.stop()
+        }
       }
     ], cb)
   }
