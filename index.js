@@ -25,8 +25,6 @@ class NetFacility extends Base {
       this.opts.poolLinger = 300000
     }
 
-    this.opts.swarmDestroyReq ||= false
-
     this.init()
   }
 
@@ -279,7 +277,7 @@ class NetFacility extends Base {
           await this.rpc.destroy()
         }
 
-        if (this.swarm && this.opts.swarmDestroyReq) {
+        if (this.swarm) {
           await this.swarm.destroy()
         }
 
