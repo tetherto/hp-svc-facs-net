@@ -265,6 +265,10 @@ class NetFacility extends Base {
     async.series([
       next => { super._stop(next) },
       async () => {
+        if (this.lookup) {
+          await this.lookup.stop()
+        }
+
         if (this.rpcServer) {
           await this.rpcServer.close()
         }
@@ -273,10 +277,11 @@ class NetFacility extends Base {
           await this.rpc.destroy()
         }
 
-        await this.dht.destroy()
-        if (this.lookup) {
-          await this.lookup.stop()
+        if (this.swarm) {
+          await this.swarm.destroy()
         }
+
+        await this.dht.destroy()
       }
     ], cb)
   }
