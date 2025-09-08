@@ -188,7 +188,7 @@ class NetFacility extends Base {
     return keys[index]
   }
 
-  async startRpcServer (keyPair = null) {
+  async startRpcServer (keyPair = null, serverOpts = {}) {
     if (this.rpcServer) {
       return
     }
@@ -196,7 +196,8 @@ class NetFacility extends Base {
     await this.startRpc(keyPair)
 
     const server = this.rpc.createServer({
-      firewall: this.buildFirewall(this.conf.allow, this.conf.allowLocal)
+      firewall: this.buildFirewall(this.conf.allow, this.conf.allowLocal),
+      ...serverOpts
     })
 
     await server.listen()
