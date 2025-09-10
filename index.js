@@ -88,23 +88,23 @@ class NetFacility extends Base {
 
   async jTopicRequest (topic, method, data, opts = {}, cached = true) {
     const key = await this.lookupTopicKey(topic, cached)
-    return this.jRequest(key, method, data, opts)
+    return this.jRequest(key, method, data, { ...this.lookup.reqOpts(), ...opts })
   }
 
-  async jEvent (k, m, d) {
+  async jEvent (key, method, data, opts) {
     if (!this.rpc) {
       throw new Error('ERR_FACS_NET_RPC_NOTFOUND')
     }
 
-    await this.rpc.event(
-      Buffer.from(k, 'hex'), m,
-      this.toOutJSON(d)
+    this.rpc.event(
+      Buffer.from(key, 'hex'), method,
+      this.toOutJSON(data), opts
     )
   }
 
-  async jTopicEvent (topic, method, data, cached = true) {
+  async jTopicEvent (topic, method, data, opts = {}, cached = true) {
     const key = await this.lookupTopicKey(topic, cached)
-    return this.jEvent(key, method, data)
+    return this.jEvent(key, method, data, { ...this.lookup.reqOpts(), ...opts })
   }
 
   async handleReply (met, data) {
@@ -188,7 +188,7 @@ class NetFacility extends Base {
     return keys[index]
   }
 
-  async startRpcServer (keyPair = null) {
+  async startRpcServer (keyPair = null, serverOpts = {}) {
     if (this.rpcServer) {
       return
     }
@@ -196,7 +196,8 @@ class NetFacility extends Base {
     await this.startRpc(keyPair)
 
     const server = this.rpc.createServer({
-      firewall: this.buildFirewall(this.conf.allow, this.conf.allowLocal)
+      firewall: this.buildFirewall(this.conf.allow, this.conf.allowLocal),
+      ...serverOpts
     })
 
     await server.listen()

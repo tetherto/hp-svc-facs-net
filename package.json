@@ -19,7 +19,7 @@
     "posttest": "npm run lint"
   },
   "dependencies": {
-    "@hyperswarm/rpc": "^3.3.2",
+    "@hyperswarm/rpc": "^3.4.0",
     "async": "^3.2.1",
     "bfx-facs-base": "git+https://github.com/bitfinexcom/bfx-facs-base.git",
     "debug": "^4.3.4",
