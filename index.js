@@ -195,8 +195,13 @@ class NetFacility extends Base {
 
     await this.startRpc(keyPair)
 
+    const { allow, allowReadOnly, allowLocal } = this.conf
+    const allowedPeers = (allow || allowReadOnly)
+      ? [...(allow || []), ...(allowReadOnly || [])]
+      : null
+
     const server = this.rpc.createServer({
-      firewall: this.buildFirewall(this.conf.allow, this.conf.allowLocal),
+      firewall: this.buildFirewall(allowedPeers, allowLocal),
       ...serverOpts
     })
 
