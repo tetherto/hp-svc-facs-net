@@ -91,6 +91,26 @@ class NetFacility extends Base {
     return this.jRequest(key, method, data, { ...this.lookup.reqOpts(), ...opts })
   }
 
+  async jRequestAll (keys, method, data, opts = {}, concurrency = null) {
+    const call = async (key) => {
+      try {
+        const res = await this.jRequest(key, method, data, opts)
+        return [null, res, key]
+      } catch (err) {
+        return [err, null, key]
+      }
+    }
+    if (!concurrency) {
+      return Promise.all(keys.map(call))
+    }
+    return async.mapLimit(keys, concurrency, call)
+  }
+
+  async jTopicRequestAll (topic, method, data, opts = {}, concurrency = null, cached = true) {
+    const keys = await this.lookupTopicKeyAll(topic, cached)
+    return this.jRequestAll(keys, method, data, { ...this.lookup.reqOpts(), ...opts }, concurrency)
+  }
+
   async jEvent (key, method, data, opts) {
     if (!this.rpc) {
       throw new Error('ERR_FACS_NET_RPC_NOTFOUND')
@@ -174,7 +194,7 @@ class NetFacility extends Base {
     return '127.0.0.1'
   }
 
-  async lookupTopicKey (topic, cached = true) {
+  async lookupTopicKeyAll (topic, cached = true) {
     if (!this.lookup) {
       throw new Error('ERR_FACS_NET_LOOKUP_NOTFOUND')
     }
@@ -183,7 +203,11 @@ class NetFacility extends Base {
     if (!keys.length) {
       throw new Error('ERR_TOPIC_LOOKUP_EMPTY')
     }
+    return keys
+  }
 
+  async lookupTopicKey (topic, cached = true) {
+    const keys = await this.lookupTopicKeyAll(topic, cached)
     const index = Math.floor(Math.random() * keys.length)
     return keys[index]
   }
