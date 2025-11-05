@@ -25,6 +25,9 @@ class NetFacility extends Base {
       this.opts.poolLinger = 300000
     }
 
+    this.baseSwarmSeedName = 'seedSwarm'
+    this.dhts = new Map()
+    this.swarms = new Map()
     this.init()
   }
 
@@ -256,14 +259,38 @@ class NetFacility extends Base {
   }
 
   async startSwarm () {
-    const seed = await this.getSeed('seedSwarm')
+    this.swarm = await this._getSwarm(this.baseSwarmSeedName, this.dht)
+  }
 
-    const swarm = new Hyperswarm({
-      seed,
-      dht: this.dht
-    })
+  async createNewSwarm (seedName) {
+    if (typeof seedName !== 'string' || !seedName.trim()) {
+      throw new Error('ERR_INVALID_SEED_NAME')
+    }
 
-    this.swarm = swarm
+    if (seedName === this.baseSwarmSeedName) {
+      throw new Error('ERR_BASE_SWARM_SEED_NOT_ALLOWED')
+    }
+
+    const dht = await this._getDht(`${seedName}dht`)
+    return await this._getSwarm(seedName, dht)
+  }
+
+  async _getSwarm (seedName, dht) {
+    if (this.swarms.has(seedName)) return this.swarms.get(seedName)
+
+    const seed = await this.getSeed(seedName)
+    const swarm = new Hyperswarm({ seed, dht })
+    this.swarms.set(seedName, swarm)
+    return swarm
+  }
+
+  async _getDht (seedName) {
+    if (this.dhts.has(seedName)) return this.dhts.get(seedName)
+
+    const seed = await this.getSeed(seedName)
+    const dht = new DHT({ keyPair: DHT.keyPair(seed) })
+    this.dhts.set(seedName, dht)
+    return dht
   }
 
   startLookup (opts) {
@@ -283,10 +310,7 @@ class NetFacility extends Base {
     async.series([
       next => { super._start(next) },
       async () => {
-        const seed = await this.getSeed('seedDht')
-        const keyPair = DHT.keyPair(seed)
-
-        this.dht = new DHT({ keyPair })
+        this.dht = await this._getDht('seedDht')
       }
     ], cb)
   }
@@ -307,11 +331,17 @@ class NetFacility extends Base {
           await this.rpc.destroy()
         }
 
-        if (this.swarm) {
-          await this.swarm.destroy()
+        for (const swarm of this.swarms.values()) {
+          await swarm.destroy()
         }
+        this.swarms.clear()
+        this.swarm = null
 
-        await this.dht.destroy()
+        for (const dht of this.dhts.values()) {
+          await dht.destroy()
+        }
+        this.dhts.clear()
+        this.dht = null
       }
     ], cb)
   }
