@@ -2,7 +2,7 @@
 
 const async = require('async')
 const RPC = require('@hyperswarm/rpc')
-const Base = require('bfx-facs-base')
+const Base = require('@bitfinex/bfx-facs-base')
 const libKeys = require('hyper-cmd-lib-keys')
 const DHT = require('hyperdht')
 const Hyperswarm = require('hyperswarm')
