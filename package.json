@@ -21,7 +21,7 @@
   "dependencies": {
     "@hyperswarm/rpc": "^3.4.0",
     "async": "^3.2.1",
-    "@bitfinex/bfx-facs-base": "git+https://github.com/bitfinexcom/bfx-facs-base.git",
+    "@bitfinex/bfx-facs-base": "git+https://github.com/sargekhan/bfx-facs-base.git#feat/js-config-support",
     "debug": "^4.3.4",
     "hyper-cmd-lib-keys": "^0.1.0",
     "hyperdht": "^6.13.1",
