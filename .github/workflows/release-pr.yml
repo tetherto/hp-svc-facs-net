@@ -1,0 +1,28 @@
+name: Bump Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version bump type
+        required: true
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+          - prerelease
+      preid:
+        description: Pre-release identifier (e.g. beta, rc)
+        required: false
+        type: string
+
+jobs:
+  bump-version:
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: tetherto/oss-actions/.github/workflows/release-pr.yml@v1
+    with:
+      bump: ${{ inputs.bump }}
+      preid: ${{ inputs.preid }}
