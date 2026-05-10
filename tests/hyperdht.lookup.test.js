@@ -37,8 +37,13 @@ test('HyperDHTLookup', async (t) => {
   })
 
   await t.test('lookup', async (t) => {
+    const lookup2 = new HyperDHTLookup({
+      dht, keyPair: HyperDHT.keyPair()
+    })
     t.teardown(async () => {
       await lookup.unnannounce(topic)
+      await lookup2.unnannounce(topic)
+      await lookup2.stop()
     })
 
     t.comment('should return empty when topic is missing')
@@ -48,11 +53,13 @@ test('HyperDHTLookup', async (t) => {
     t.comment('should return cached content when present')
     await lookup.announce(topic)
     res = await lookup.lookup(topic)
-    t.is(res.length, 0)
+    await lookup2.announce(topic)
+    res = await lookup.lookup(topic)
+    t.is(res.length, 1)
 
     t.comment('should return uncached content when flag is false')
     res = await lookup.lookup(topic, false)
-    t.is(res.length, 1)
+    t.is(res.length, 2)
     t.is(res[0], dhtPublicKey)
   })
 
