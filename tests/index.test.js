@@ -1,6 +1,7 @@
 'use strict'
 
 const StoreFacility = require('@tetherto/hp-svc-facs-store')
+const crypto = require('crypto')
 const fs = require('fs')
 const path = require('path')
 const sinon = require('sinon')
@@ -163,6 +164,103 @@ test('NetFacility', async (t) => {
         /RPC client closed/
       )
       t.is(facCaller.calls.clientClosed, 4)
+    })
+  })
+
+  await t.test('jTopicRequest', async (t) => {
+    net.startLookup()
+    const topic = 'jTopicRequest-test-' + crypto.randomBytes(16).toString('hex')
+    await net.lookup.announce(topic)
+
+    t.teardown(async () => {
+      await net.lookup.unnannounce(topic)
+    })
+
+    await t.test('should return response upon request', async (t) => {
+      const res = await net.jTopicRequest(topic, 'ping', { value: 10 })
+      t.is(res, 10)
+    })
+
+    await t.test('should throw ERR_FACS_NET_LOOKUP_NOTFOUND when lookup is not initialized', async (t) => {
+      const saved = net.lookup
+      net.lookup = null
+      t.teardown(() => { net.lookup = saved })
+
+      await t.exception(
+        () => net.jTopicRequest(topic, 'ping', { value: 1 }),
+        /ERR_FACS_NET_LOOKUP_NOTFOUND/
+      )
+    })
+
+    await t.test('should throw ERR_TOPIC_LOOKUP_EMPTY when no peers announce topic', async (t) => {
+      const unannouncedTopic = 'jTopicRequest-unannounced-' + crypto.randomBytes(16).toString('hex')
+
+      await t.exception(
+        () => net.jTopicRequest(unannouncedTopic, 'ping', {}),
+        /ERR_TOPIC_LOOKUP_EMPTY/
+      )
+    })
+
+    await t.test('should propagate remote handler errors as HRPC_ERR', async (t) => {
+      await t.exception(
+        () => net.jTopicRequest(topic, 'fail', {}),
+        /HRPC_ERR.*boom/
+      )
+    })
+
+    await t.test('autoRetry=0 (default): should not retry on RPC client closed', async (t) => {
+      t.teardown(() => facCaller.resetCalls())
+
+      await t.exception(
+        () => net.jTopicRequest(topic, 'clientClosed', {}),
+        /RPC client closed/
+      )
+      t.is(facCaller.calls.clientClosed, 1)
+    })
+
+    await t.test('autoRetry=1: should retry once on RPC client closed and succeed', async (t) => {
+      t.teardown(() => facCaller.resetCalls())
+
+      const res = await net.jTopicRequest(topic, 'clientClosedOnce', { value: 11 }, {}, true, 1)
+
+      t.is(res, 11)
+      t.is(facCaller.calls.clientClosedOnce, 2)
+    })
+
+    await t.test('autoRetry=1: should not retry on non-matching errors', async (t) => {
+      t.teardown(() => facCaller.resetCalls())
+
+      await t.exception(
+        () => net.jTopicRequest(topic, 'nonMatching', {}, {}, true, 1),
+        /some other error/
+      )
+      t.is(facCaller.calls.nonMatching, 1)
+    })
+
+    await t.test('autoRetry=N: should give up after N retries if RPC client closed persists', async (t) => {
+      t.teardown(() => facCaller.resetCalls())
+
+      await t.exception(
+        () => net.jTopicRequest(topic, 'clientClosed', {}, {}, true, 3),
+        /RPC client closed/
+      )
+      t.is(facCaller.calls.clientClosed, 4)
+    })
+
+    await t.test('should invalidate lookup cache on retry', async (t) => {
+      t.teardown(() => facCaller.resetCalls())
+      const spy = sinon.spy(net, 'lookupTopicKey')
+      t.teardown(() => spy.restore())
+
+      await t.exception(
+        () => net.jTopicRequest(topic, 'clientClosed', {}, {}, true, 2),
+        /RPC client closed/
+      )
+
+      t.is(spy.callCount, 3)
+      t.is(spy.firstCall.args[1], true)
+      t.is(spy.secondCall.args[1], false)
+      t.is(spy.thirdCall.args[1], false)
     })
   })
 })
