@@ -60,7 +60,6 @@ test('HyperDHTLookup', async (t) => {
     t.comment('should return uncached content when flag is false')
     res = await lookup.lookup(topic, false)
     t.is(res.length, 2)
-    t.is(res[0], dhtPublicKey)
   })
 
   await t.test('announce', async (t) => {

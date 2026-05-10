@@ -43,6 +43,7 @@
     }
   ],
   "devDependencies": {
+    "@tetherto/hp-svc-facs-store": "git+https://github.com/tetherto/hp-svc-facs-store.git#v1.0.0",
     "brittle": "^3.16.3",
     "sinon": "^21.0.0",
     "standard": "^17.1.2"

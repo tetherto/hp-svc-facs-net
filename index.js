@@ -90,7 +90,7 @@ class NetFacility extends Base {
     try {
       return await this._request(key, method, data, opts)
     } catch (err) {
-      if (autoRetry > 0 && err.message === 'RPC client closed') {
+      if (autoRetry > 0 && err.message.includes('RPC client closed')) {
         return this.jRequest(key, method, data, opts, --autoRetry)
       }
       throw err
