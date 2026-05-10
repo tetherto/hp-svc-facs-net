@@ -80,6 +80,9 @@ test('NetFacility', async (t) => {
   await net.startRpcServer()
   const rpcKey = net.rpcServer.publicKey
 
+  // Keep retry tests fast by default; the dedicated delay test overrides this.
+  net.opts.autoRetryDelay = 0
+
   for (const method of ['ping', 'fail', 'clientClosed', 'clientClosedOnce', 'nonMatching']) {
     net.rpcServer.respond(method, (req) => net.handleReply(method, req))
   }
@@ -164,6 +167,40 @@ test('NetFacility', async (t) => {
         /RPC client closed/
       )
       t.is(facCaller.calls.clientClosed, 4)
+    })
+
+    await t.test('should sleep fac.opts.autoRetryDelay ms between retries', async (t) => {
+      const savedDelay = net.opts.autoRetryDelay
+      net.opts.autoRetryDelay = 100
+      t.teardown(() => {
+        net.opts.autoRetryDelay = savedDelay
+        facCaller.resetCalls()
+      })
+
+      const started = Date.now()
+      await t.exception(
+        () => net.jRequest(rpcKey, 'clientClosed', {}, {}, 3),
+        /RPC client closed/
+      )
+      const elapsed = Date.now() - started
+
+      t.is(facCaller.calls.clientClosed, 4)
+      // 3 retries × 100ms sleep each, minus a small fudge for timer jitter.
+      t.ok(elapsed >= 3 * 100 - 20, `elapsed ${elapsed}ms should be >= ~300ms`)
+    })
+
+    await t.test('should honour per-call opts.autoRetryDelay overriding facility default', async (t) => {
+      t.teardown(() => facCaller.resetCalls())
+
+      const started = Date.now()
+      await t.exception(
+        () => net.jRequest(rpcKey, 'clientClosed', {}, { autoRetryDelay: 100 }, 2),
+        /RPC client closed/
+      )
+      const elapsed = Date.now() - started
+
+      t.is(facCaller.calls.clientClosed, 3)
+      t.ok(elapsed >= 2 * 100 - 20, `elapsed ${elapsed}ms should be >= ~200ms`)
     })
   })
 

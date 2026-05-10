@@ -7,6 +7,7 @@ const libKeys = require('hyper-cmd-lib-keys')
 const DHT = require('hyperdht')
 const Hyperswarm = require('hyperswarm')
 const os = require('os')
+const { setTimeout: sleep } = require('timers/promises')
 
 const HyperDHTLookup = require('./lib/hyperdht.lookup')
 
@@ -23,6 +24,10 @@ class NetFacility extends Base {
 
     if (!this.opts.poolLinger) {
       this.opts.poolLinger = 300000
+    }
+
+    if (!this.opts.autoRetryDelay) {
+      this.opts.autoRetryDelay = 200
     }
 
     this.init()
@@ -86,11 +91,13 @@ class NetFacility extends Base {
     if (!opts.timeout) {
       opts.timeout = this.opts.timeout
     }
+    const autoRetryDelay = opts.autoRetryDelay || this.opts.autoRetryDelay
 
     try {
       return await this._request(key, method, data, opts)
     } catch (err) {
       if (autoRetry > 0 && err.message.includes('RPC client closed')) {
+        await sleep(autoRetryDelay)
         return this.jRequest(key, method, data, opts, autoRetry - 1)
       }
       throw err
