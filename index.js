@@ -179,7 +179,7 @@ class NetFacility extends Base {
     try {
       return await this.jRequest(key, method, data, { ...this.lookup.reqOpts(), ...opts })
     } catch (err) {
-      if (autoRetry > 0 && err.message.includes('RPC client closed')) {
+      if (autoRetry > 0 && (err.message.includes('RPC client closed') || err.code === 'CHANNEL_CLOSED')) {
         // force invalidate cache (false = not cached)
         return this.jTopicRequest(topic, method, data, opts, false, autoRetry - 1)
       }

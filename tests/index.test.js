@@ -284,6 +284,34 @@ test('NetFacility', async (t) => {
       t.is(facCaller.calls.clientClosed, 4)
     })
 
+    await t.test('autoRetry=1: should retry once on CHANNEL_CLOSED and succeed', async (t) => {
+      const original = net.rpc.request.bind(net.rpc)
+      const stub = sinon.stub(net.rpc, 'request')
+      const err = new Error('Channel closed')
+      err.code = 'CHANNEL_CLOSED'
+      stub.onFirstCall().rejects(err)
+      stub.callsFake((...args) => original(...args))
+      t.teardown(() => stub.restore())
+
+      const res = await net.jTopicRequest(topic, 'ping', { value: 42 }, {}, true, 1)
+
+      t.is(res, 42)
+      t.is(stub.callCount, 2)
+    })
+
+    await t.test('autoRetry=N: should give up after N retries if CHANNEL_CLOSED persists', async (t) => {
+      const err = new Error('Channel closed')
+      err.code = 'CHANNEL_CLOSED'
+      const stub = sinon.stub(net.rpc, 'request').rejects(err)
+      t.teardown(() => stub.restore())
+
+      await t.exception(
+        () => net.jTopicRequest(topic, 'ping', {}, {}, true, 3),
+        /Channel closed/
+      )
+      t.is(stub.callCount, 4)
+    })
+
     await t.test('should invalidate lookup cache on retry', async (t) => {
       t.teardown(() => facCaller.resetCalls())
       const spy = sinon.spy(net, 'lookupTopicKey')
