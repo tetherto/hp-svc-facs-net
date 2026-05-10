@@ -91,7 +91,7 @@ class NetFacility extends Base {
       return await this._request(key, method, data, opts)
     } catch (err) {
       if (autoRetry > 0 && err.message.includes('RPC client closed')) {
-        return this.jRequest(key, method, data, opts, --autoRetry)
+        return this.jRequest(key, method, data, opts, autoRetry - 1)
       }
       throw err
     }
@@ -99,7 +99,15 @@ class NetFacility extends Base {
 
   async jTopicRequest (topic, method, data, opts = {}, cached = true, autoRetry = 0) {
     const key = await this.lookupTopicKey(topic, cached)
-    return this.jRequest(key, method, data, { ...this.lookup.reqOpts(), ...opts }, autoRetry)
+    try {
+      return await this.jRequest(key, method, data, { ...this.lookup.reqOpts(), ...opts })
+    } catch (err) {
+      if (autoRetry > 0 && err.message.includes('RPC client closed')) {
+        // force invaldate cache (false = not cached)
+        return this.jTopicRequest(topic, method, data, opts, false, autoRetry - 1)
+      }
+      throw err
+    }
   }
 
   async jRequestAll (keys, method, data, opts = {}, concurrency = null, autoRetry = 0) {
