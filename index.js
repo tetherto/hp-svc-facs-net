@@ -66,15 +66,7 @@ class NetFacility extends Base {
     return Buffer.from(data.toString())
   }
 
-  async jRequest (key, method, data, opts = {}) {
-    if (!this.rpc) {
-      throw new Error('ERR_FACS_NET_RPC_NOTFOUND')
-    }
-
-    if (!opts.timeout) {
-      opts.timeout = this.opts.timeout
-    }
-
+  async _request (key, method, data, opts) {
     let res = await this.rpc.request(
       Buffer.from(key, 'hex'), method,
       this.toOutJSON(data), opts
@@ -86,15 +78,34 @@ class NetFacility extends Base {
     return res
   }
 
-  async jTopicRequest (topic, method, data, opts = {}, cached = true) {
-    const key = await this.lookupTopicKey(topic, cached)
-    return this.jRequest(key, method, data, { ...this.lookup.reqOpts(), ...opts })
+  async jRequest (key, method, data, opts = {}, autoRetry = 0) {
+    if (!this.rpc) {
+      throw new Error('ERR_FACS_NET_RPC_NOTFOUND')
+    }
+
+    if (!opts.timeout) {
+      opts.timeout = this.opts.timeout
+    }
+
+    try {
+      return await this._request(key, method, data, opts)
+    } catch (err) {
+      if (autoRetry > 0 && err.message === 'RPC client closed') {
+        return this.jRequest(key, method, data, opts, --autoRetry)
+      }
+      throw err
+    }
   }
 
-  async jRequestAll (keys, method, data, opts = {}, concurrency = null) {
+  async jTopicRequest (topic, method, data, opts = {}, cached = true, autoRetry = 0) {
+    const key = await this.lookupTopicKey(topic, cached)
+    return this.jRequest(key, method, data, { ...this.lookup.reqOpts(), ...opts }, autoRetry)
+  }
+
+  async jRequestAll (keys, method, data, opts = {}, concurrency = null, autoRetry = 0) {
     const call = async (key) => {
       try {
-        const res = await this.jRequest(key, method, data, opts)
+        const res = await this.jRequest(key, method, data, opts, autoRetry)
         return [null, res, key]
       } catch (err) {
         return [err, null, key]
@@ -106,9 +117,9 @@ class NetFacility extends Base {
     return async.mapLimit(keys, concurrency, call)
   }
 
-  async jTopicRequestAll (topic, method, data, opts = {}, concurrency = null, cached = true) {
+  async jTopicRequestAll (topic, method, data, opts = {}, concurrency = null, cached = true, autoRetry = 0) {
     const keys = await this.lookupTopicKeyAll(topic, cached)
-    return this.jRequestAll(keys, method, data, { ...this.lookup.reqOpts(), ...opts }, concurrency)
+    return this.jRequestAll(keys, method, data, { ...this.lookup.reqOpts(), ...opts }, concurrency, autoRetry)
   }
 
   async jEvent (key, method, data, opts) {
