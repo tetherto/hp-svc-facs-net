@@ -150,7 +150,7 @@ class NetFacility extends Base {
     if (!opts.timeout) {
       opts.timeout = this.opts.timeout
     }
-    const autoRetryDelay = opts.autoRetryDelay || this.opts.autoRetryDelay
+    const autoRetryDelay = opts.autoRetryDelay ?? this.opts.autoRetryDelay
 
     try {
       return await this._request(key, method, data, opts)
