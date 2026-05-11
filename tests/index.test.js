@@ -169,6 +169,34 @@ test('NetFacility', async (t) => {
       t.is(facCaller.calls.clientClosed, 4)
     })
 
+    await t.test('autoRetry=1: should retry once on CHANNEL_CLOSED and succeed', async (t) => {
+      const original = net.rpc.request.bind(net.rpc)
+      const stub = sinon.stub(net.rpc, 'request')
+      const err = new Error('Channel closed')
+      err.code = 'CHANNEL_CLOSED'
+      stub.onFirstCall().rejects(err)
+      stub.callsFake((...args) => original(...args))
+      t.teardown(() => stub.restore())
+
+      const res = await net.jRequest(rpcKey, 'ping', { value: 21 }, {}, 1)
+
+      t.is(res, 21)
+      t.is(stub.callCount, 2)
+    })
+
+    await t.test('autoRetry=N: should give up after N retries if CHANNEL_CLOSED persists', async (t) => {
+      const err = new Error('Channel closed')
+      err.code = 'CHANNEL_CLOSED'
+      const stub = sinon.stub(net.rpc, 'request').rejects(err)
+      t.teardown(() => stub.restore())
+
+      await t.exception(
+        () => net.jRequest(rpcKey, 'ping', {}, {}, 3),
+        /Channel closed/
+      )
+      t.is(stub.callCount, 4)
+    })
+
     await t.test('should sleep fac.opts.autoRetryDelay ms between retries', async (t) => {
       const savedDelay = net.opts.autoRetryDelay
       net.opts.autoRetryDelay = 100

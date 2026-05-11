@@ -155,7 +155,7 @@ class NetFacility extends Base {
     try {
       return await this._request(key, method, data, opts)
     } catch (err) {
-      if (autoRetry > 0 && err.message.includes('RPC client closed')) {
+      if (autoRetry > 0 && (err.message.includes('RPC client closed') || err.code === 'CHANNEL_CLOSED')) {
         await sleep(autoRetryDelay)
         return this.jRequest(key, method, data, opts, autoRetry - 1)
       }
