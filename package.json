@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/hp-svc-facs-net",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": false,
   "description": "Holepunch SVC Facility RPC",
   "author": {
