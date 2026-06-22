@@ -478,8 +478,8 @@ class NetFacility extends Base {
       async () => {
         const seed = await this.getSeed('seedDht')
         const dhtOpts = {
-          ...this.opts.dhtOpts,
-          ...this.conf.dhtOpts,
+          ...(this.conf.dhtOpts || {}),
+          ...(this.opts.dhtOpts || {}),
           keyPair: DHT.keyPair(seed)
         }
 
