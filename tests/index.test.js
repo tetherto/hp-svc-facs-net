@@ -140,6 +140,36 @@ test('NetFacility', async (t) => {
       t.is(facCaller.calls.clientClosed, 1)
     })
 
+    await t.test('should evict a stale pooled client and re-dial', async (t) => {
+      t.teardown(() => facCaller.resetCalls())
+
+      // Warm the pool, then wedge the pooled client into the state left by a
+      // stream that dies before its RPC channel opens: it reports closed but
+      // never emitted 'close', so the pool still holds it.
+      await net.jRequest(rpcKey, 'ping', { value: 1 })
+      const poolId = rpcKey.toString('hex')
+      const stale = net.rpc._pool.get(poolId)
+      t.ok(stale, 'client is pooled after a request')
+      stale.client._closed = true
+
+      const res = await net.jRequest(rpcKey, 'ping', { value: 42 })
+
+      t.is(res, 42, 'request succeeds via a fresh client')
+      t.not(net.rpc._pool.get(poolId), stale, 'stale client was evicted from the pool')
+    })
+
+    await t.test('should re-dial exactly once when RPC client closed persists at transport level', async (t) => {
+      const err = new Error('RPC client closed')
+      const stub = sinon.stub(net.rpc, 'request').rejects(err)
+      t.teardown(() => stub.restore())
+
+      await t.exception(
+        () => net.jRequest(rpcKey, 'ping', { value: 1 }),
+        /RPC client closed/
+      )
+      t.is(stub.callCount, 2)
+    })
+
     await t.test('autoRetry=1: should retry once on RPC client closed and succeed', async (t) => {
       t.teardown(() => facCaller.resetCalls())
 
