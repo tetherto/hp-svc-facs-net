@@ -119,11 +119,10 @@ class NetFacility extends Base {
   }
 
   /**
-   * Removes the pooled RPC client for `key` when it is already closed, so the
-   * next request re-dials. A client whose stream dies before its RPC channel
-   * opens never emits 'close', so the rpc pool never evicts it and every
-   * request to that key fails instantly with `RPC client closed` forever.
-   * @param {Buffer|string} key - peer RPC publicKey (Buffer or hex string)
+   * Evicts the pooled RPC client for `key` if it is already closed, so the
+   * next request re-dials. A client that dies before its RPC channel opens
+   * never emits 'close' and would otherwise stay pooled (and failing) forever.
+   * @param {Buffer|string} key
    */
   _evictStaleRpcClient (key) {
     const pool = this.rpc._pool
@@ -147,9 +146,8 @@ class NetFacility extends Base {
     try {
       res = await this.rpc.request(publicKey, method, payload, opts)
     } catch (err) {
-      // `RPC client closed` is thrown before anything is sent, so the request
-      // never reached the peer: evicting the stale client and re-dialing once
-      // is safe even for non-idempotent methods.
+      // Thrown before anything is sent, so evicting the stale client and
+      // re-dialing once is safe even for non-idempotent methods.
       if (err.message !== 'RPC client closed') {
         throw err
       }
