@@ -356,4 +356,54 @@ test('NetFacility', async (t) => {
       t.is(spy.thirdCall.args[1], false)
     })
   })
+
+  await t.test('buildFirewall', async (t) => {
+    const allowedKey = crypto.randomBytes(32)
+    const strangerKey = crypto.randomBytes(32)
+    const localIp = '192.168.1.50'
+    const remoteAddr = { host: '203.0.113.7', port: 5000 }
+
+    // The predicate returns `true` to REJECT a peer and `false` to ALLOW it.
+    await t.test('rejects a peer that is not on the allow-list', async (t) => {
+      const firewall = net.buildFirewall([allowedKey], false)
+      t.is(firewall(strangerKey, {}, remoteAddr), true)
+    })
+
+    await t.test('allows a peer that is on the allow-list', async (t) => {
+      const firewall = net.buildFirewall([allowedKey], false)
+      t.is(firewall(allowedKey, {}, remoteAddr), false)
+    })
+
+    await t.test('allows everyone when no allow-list is configured', async (t) => {
+      const firewall = net.buildFirewall(null, false)
+      t.is(firewall(strangerKey, {}, remoteAddr), false)
+    })
+
+    await t.test('allowLocal allows a non-allow-listed peer whose observed address is local', async (t) => {
+      const stub = sinon.stub(net, 'getLocalIPAddress').returns(localIp)
+      t.teardown(() => stub.restore())
+
+      const firewall = net.buildFirewall([allowedKey], true)
+      t.is(firewall(strangerKey, {}, { host: localIp, port: 49152 }), false)
+    })
+
+    await t.test('allowLocal ignores a spoofed handshake addresses4 (WDK-1599 bypass)', async (t) => {
+      const stub = sinon.stub(net, 'getLocalIPAddress').returns(localIp)
+      t.teardown(() => stub.restore())
+
+      const firewall = net.buildFirewall([allowedKey], true)
+      // Attacker claims the host's local IP in the peer-controlled handshake
+      // payload, but actually connects from a remote address. Must be rejected.
+      const spoofedPayload = { addresses4: [{ host: localIp, port: 1 }] }
+      t.is(firewall(strangerKey, spoofedPayload, remoteAddr), true)
+    })
+
+    await t.test('allowLocal rejects a non-allow-listed peer when no observed address is provided', async (t) => {
+      const stub = sinon.stub(net, 'getLocalIPAddress').returns(localIp)
+      t.teardown(() => stub.restore())
+
+      const firewall = net.buildFirewall([allowedKey], true)
+      t.is(firewall(strangerKey, { addresses4: [{ host: localIp }] }, undefined), true)
+    })
+  })
 })

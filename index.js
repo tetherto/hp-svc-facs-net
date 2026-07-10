@@ -314,8 +314,8 @@ class NetFacility extends Base {
    * Builds a `@hyperswarm/rpc` firewall predicate. The returned function returns
    * `true` to reject a peer and `false` to allow it.
    * @param {Array<Buffer|string>|null} allowed - allow-list of peer publicKeys; `null` disables filtering
-   * @param {boolean} [allowLocal=false] - additionally allow peers connecting from the host's local IPv4
-   * @returns {function(Buffer, Object): boolean}
+   * @param {boolean} [allowLocal=false] - additionally allow peers whose observed remote address is the host's local IPv4
+   * @returns {function(Buffer, Object, {host: string, port: number}=): boolean} predicate `(remotePublicKey, remoteHandshakePayload, remoteAddress)`; the allowLocal check matches the DHT-observed `remoteAddress`, not the peer-supplied handshake payload
    */
   buildFirewall (allowed, allowLocal = false) {
     // convert keys to Buffer if string
@@ -324,12 +324,14 @@ class NetFacility extends Base {
     // if firewall enabled, allow from local ip
     const localIp = allowLocal ? this.getLocalIPAddress() : null
 
-    return (remotePublicKey, remoteHandshakePayload) => {
+    return (remotePublicKey, remoteHandshakePayload, remoteAddress) => {
       if (allowed && !libKeys.checkAllowList(allowed, remotePublicKey)) {
-        if (allowLocal && localIp && remoteHandshakePayload?.addresses4) {
-          for (const remoteHost of remoteHandshakePayload.addresses4) {
-            if (remoteHost.host === localIp) return false
-          }
+        // allowLocal only trusts the address the DHT observed the peer connect
+        // from (remoteAddress); never remoteHandshakePayload.addresses4, which the
+        // remote peer sets freely and could use to claim a local IP to bypass the
+        // allow-list.
+        if (allowLocal && localIp && remoteAddress?.host === localIp) {
+          return false
         }
 
         return true
