@@ -1,6 +1,7 @@
 'use strict'
 
 const StoreFacility = require('@tetherto/hp-svc-facs-store')
+const HyperDHT = require('hyperdht')
 const crypto = require('crypto')
 const fs = require('fs')
 const path = require('path')
@@ -143,19 +144,29 @@ test('NetFacility', async (t) => {
     await t.test('should evict a stale pooled client and re-dial', async (t) => {
       t.teardown(() => facCaller.resetCalls())
 
-      // Warm the pool, then wedge the pooled client into the state left by a
-      // stream that dies before its RPC channel opens: it reports closed but
-      // never emitted 'close', so the pool still holds it.
-      await net.jRequest(rpcKey, 'ping', { value: 1 })
-      const poolId = rpcKey.toString('hex')
-      const stale = net.rpc._pool.get(poolId)
-      t.ok(stale, 'client is pooled after a request')
-      stale.client._closed = true
+      // Real trigger for the stale-client state: the server firewall rejects
+      // the first dial, killing the client stream during the capability
+      // handshake, so the pooled client never emits 'close' and would stay
+      // wedged forever without the eviction.
+      const capability = crypto.randomBytes(32)
+      let conns = 0
+      const server = net.rpc.createServer({
+        capability,
+        firewall: () => conns++ < 1
+      })
+      server.respond('ping', (req) => net.handleReply('ping', req))
+      await server.listen(HyperDHT.keyPair())
+      t.teardown(() => server.close())
 
-      const res = await net.jRequest(rpcKey, 'ping', { value: 42 })
+      const spy = sinon.spy(net.rpc, 'request')
+      t.teardown(() => spy.restore())
+
+      const res = await net.jRequest(server.publicKey, 'ping', { value: 42 }, { capability })
 
       t.is(res, 42, 'request succeeds via a fresh client')
-      t.not(net.rpc._pool.get(poolId), stale, 'stale client was evicted from the pool')
+      t.is(spy.callCount, 2, 'stale client was evicted and re-dialed once')
+      await t.exception(() => spy.firstCall.returnValue, /RPC client closed/)
+      t.is(conns, 2, 'firewall saw the rejected dial and the re-dial')
     })
 
     await t.test('should re-dial exactly once when RPC client closed persists at transport level', async (t) => {
