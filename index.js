@@ -6,7 +6,6 @@ const Base = require('@bitfinex/bfx-facs-base')
 const libKeys = require('hyper-cmd-lib-keys')
 const DHT = require('hyperdht')
 const Hyperswarm = require('hyperswarm')
-const os = require('os')
 const { setTimeout: sleep } = require('timers/promises')
 
 const HyperDHTLookup = require('./lib/hyperdht.lookup')
@@ -314,41 +313,19 @@ class NetFacility extends Base {
    * Builds a `@hyperswarm/rpc` firewall predicate. The returned function returns
    * `true` to reject a peer and `false` to allow it.
    * @param {Array<Buffer|string>|null} allowed - allow-list of peer publicKeys; `null` disables filtering
-   * @param {boolean} [allowLocal=false] - additionally allow peers connecting from the host's local IPv4
    * @returns {function(Buffer, Object): boolean}
    */
-  buildFirewall (allowed, allowLocal = false) {
+  buildFirewall (allowed) {
     // convert keys to Buffer if string
     allowed = allowed?.map(k => typeof k === 'string' ? Buffer.from(k, 'hex') : k)
 
-    // if firewall enabled, allow from local ip
-    const localIp = allowLocal ? this.getLocalIPAddress() : null
-
-    return (remotePublicKey, remoteHandshakePayload) => {
+    return (remotePublicKey) => {
       if (allowed && !libKeys.checkAllowList(allowed, remotePublicKey)) {
-        if (allowLocal && localIp && remoteHandshakePayload?.addresses4) {
-          for (const remoteHost of remoteHandshakePayload.addresses4) {
-            if (remoteHost.host === localIp) return false
-          }
-        }
-
         return true
       }
 
       return false
     }
-  }
-
-  /**
-   * @returns {string} primary non-internal IPv4 address of the host, or '127.0.0.1' as fallback
-   */
-  getLocalIPAddress () {
-    for (const devices of Object.values(os.networkInterfaces())) {
-      const device = devices.find(d => d.family === 'IPv4' && d.address !== '127.0.0.1' && !d.internal)
-      if (device) return device.address
-    }
-
-    return '127.0.0.1'
   }
 
   /**
@@ -397,13 +374,16 @@ class NetFacility extends Base {
 
     await this.startRpc(keyPair)
 
-    const { allow, allowReadOnly, allowLocal } = this.conf
+    const { allow, allowReadOnly } = this.conf
+    if (this.conf.allowLocal) {
+      console.warn('WARNING: net facility "allowLocal" option was removed. it is now ignored. Use the "allow" public-key allowlist instead.')
+    }
     const allowedPeers = (allow || allowReadOnly)
       ? [...(allow || []), ...(allowReadOnly || [])]
       : null
 
     const server = this.rpc.createServer({
-      firewall: this.buildFirewall(allowedPeers, allowLocal),
+      firewall: this.buildFirewall(allowedPeers),
       ...serverOpts
     })
 
