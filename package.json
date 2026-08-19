@@ -47,5 +47,9 @@
     "brittle": "^3.16.3",
     "sinon": "^21.0.0",
     "standard": "^17.1.2"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   }
 }
