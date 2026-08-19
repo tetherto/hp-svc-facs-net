@@ -30,3 +30,18 @@ jobs:
 
           git tag "$TAG"
           git push origin "$TAG"
+
+  publish:
+    needs: tag-release
+    runs-on: ubuntu-latest
+    environment:
+      name: release
+    name: Publish
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: holepunchto/actions/node-base@v1
+        with:
+          allow-git: all
+      - uses: holepunchto/actions/publish@v1
