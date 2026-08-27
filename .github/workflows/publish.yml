@@ -43,4 +43,10 @@ jobs:
       - uses: holepunchto/actions/node-base@v1
         with:
           allow-git: all
+      - id: pkg
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
       - uses: holepunchto/actions/publish@v1
+        with:
+          ref-name: ${{ steps.pkg.outputs.tag }}
