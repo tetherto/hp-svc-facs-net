@@ -21,6 +21,7 @@ const HyperDHTLookup = require('./lib/hyperdht.lookup')
  * @property {number} [timeout] - default RPC request timeout in ms (default: 30000)
  * @property {number} [poolLinger] - RPC pool linger time in ms (default: 300000)
  * @property {number} [autoRetryDelay] - default sleep between autoRetry attempts in ms (default: 200)
+ * @property {function(): (boolean|Promise<boolean>)} [rpcServerReady] - optional incoming connection readiness hook
  * @property {import('@tetherto/hp-svc-facs-store')} [fac_store] - hp-svc-facs-store instance used to persist seeds; falls back to caller.store_s0
  */
 
@@ -42,6 +43,10 @@ class NetFacility extends Base {
 
     this.name = 'net'
     this._hasConf = true
+
+    if (this.opts.rpcServerReady !== undefined && typeof this.opts.rpcServerReady !== 'function') {
+      throw new TypeError('ERR_FACS_NET_RPC_READY_INVALID')
+    }
 
     if (!this.opts.timeout) {
       this.opts.timeout = 30000
@@ -382,14 +387,25 @@ class NetFacility extends Base {
       ? [...(allow || []), ...(allowReadOnly || [])]
       : null
 
-    const server = this.rpc.createServer({
+    const options = {
       firewall: this.buildFirewall(allowedPeers),
       ...serverOpts
-    })
+    }
+    options.firewall = this._withRpcReadiness(options.firewall)
+    const server = this.rpc.createServer(options)
 
     await server.listen()
 
     this.rpcServer = server
+  }
+
+  _withRpcReadiness (firewall) {
+    if (!this.opts.rpcServerReady) return firewall
+
+    return async (...args) => {
+      if (firewall && await firewall(...args)) return true
+      return await this.opts.rpcServerReady() !== true
+    }
   }
 
   /**
