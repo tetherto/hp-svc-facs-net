@@ -1,8 +1,11 @@
 'use strict'
 
+const RPC = require('@hyperswarm/rpc')
 const StoreFacility = require('@tetherto/hp-svc-facs-store')
 const crypto = require('crypto')
 const fs = require('fs')
+const DHT = require('hyperdht')
+const createTestnet = require('hyperdht/testnet')
 const path = require('path')
 const sinon = require('sinon')
 const test = require('brittle')
@@ -18,6 +21,18 @@ const newCaller = () => new class FacCaller extends EventEmitter {
     this.ctx = { root: __dirname }
   }
 }()
+
+const startTestnetNet = async (t, opts) => {
+  const network = await createTestnet(3)
+  const net = new NetFacility(newCaller(), { ns: 'r0', label: 'r0', root: __dirname, ...opts }, facCtx)
+  net.dht = network.createNode()
+  await net.startRpc(DHT.keyPair())
+  t.teardown(async () => {
+    await net.rpc.destroy()
+    await network.destroy()
+  })
+  return { net, network }
+}
 
 test('buildFirewall', async (t) => {
   const net = new NetFacility(newCaller(), { ns: 'r0', label: 'r0', root: __dirname }, facCtx)
@@ -86,4 +101,50 @@ test('startRpcServer with legacy allowLocal conf', async (t) => {
     warnSpy.getCalls().some(c => String(c.args[0]).includes('allowLocal')),
     'deprecation warning logged'
   )
+})
+
+test('startRpcServer holds incoming connections until rpcServerReady resolves', async (t) => {
+  let markReady
+  let onWaiting
+  const ready = new Promise((resolve) => { markReady = resolve })
+  const waiting = new Promise((resolve) => { onWaiting = resolve })
+  const { net, network } = await startTestnetNet(t, {
+    rpcServerReady: () => {
+      onWaiting()
+      return ready
+    }
+  })
+  const client = new RPC({ dht: network.createNode() })
+  t.teardown(() => client.destroy())
+
+  const capability = Buffer.from('rpc-ready-test')
+  await net.startRpcServer(null, { capability })
+
+  const res = client.request(net.rpcServer.publicKey, 'ping', Buffer.from('pong'), { capability, timeout: 3000 })
+  await waiting
+  net.rpcServer.respond('ping', (data) => data)
+  markReady()
+
+  t.is((await res).toString(), 'pong')
+})
+
+test('startRpcServer keeps the allowlist when rpcServerReady is set', async (t) => {
+  let markReady
+  const ready = new Promise((resolve) => { markReady = resolve })
+  const { net } = await startTestnetNet(t, { rpcServerReady: () => ready })
+  const member = crypto.randomBytes(32)
+  const outsider = crypto.randomBytes(32)
+  net.conf.allow = [member.toString('hex')]
+  const createServer = sinon.spy(net.rpc, 'createServer')
+
+  await net.startRpcServer()
+  const { firewall } = createServer.firstCall.args[0]
+
+  t.is(await firewall(outsider), true)
+  let settled = false
+  const memberRejected = firewall(member).finally(() => { settled = true })
+  await new Promise((resolve) => setImmediate(resolve))
+  t.is(settled, false)
+  markReady()
+  t.is(await memberRejected, false)
 })
