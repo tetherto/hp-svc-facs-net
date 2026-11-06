@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@bitfinex/bfx-facs-base": "^1.1.0",
-    "@hyperswarm/rpc": "^3.4.0",
+    "@hyperswarm/rpc": "^3.5.1",
     "async": "^3.2.1",
     "debug": "^4.3.4",
     "hyper-cmd-lib-keys": "^0.1.0",
