@@ -21,7 +21,6 @@ const HyperDHTLookup = require('./lib/hyperdht.lookup')
  * @property {number} [timeout] - default RPC request timeout in ms (default: 30000)
  * @property {number} [poolLinger] - RPC pool linger time in ms (default: 300000)
  * @property {number} [autoRetryDelay] - default sleep between autoRetry attempts in ms (default: 200)
- * @property {function(): Promise<void>} [rpcServerReady] - incoming RPC connections wait until the returned promise resolves
  * @property {import('@tetherto/hp-svc-facs-store')} [fac_store] - hp-svc-facs-store instance used to persist seeds; falls back to caller.store_s0
  */
 
@@ -311,20 +310,21 @@ class NetFacility extends Base {
   }
 
   /**
-   * Builds a `@hyperswarm/rpc` firewall predicate. The returned function returns
-   * `true` to reject a peer and `false` to allow it.
+   * Builds a `@hyperswarm/rpc` firewall predicate. The returned function resolves `true` to reject
+   * a peer and `false` to allow it. Allowed peers wait until `caller._pStartupFinished` resolves, when set.
    * @param {Array<Buffer|string>|null} allowed - allow-list of peer publicKeys; `null` disables filtering
-   * @returns {function(Buffer, Object): boolean}
+   * @returns {function(Buffer, Object): Promise<boolean>}
    */
   buildFirewall (allowed) {
     // convert keys to Buffer if string
     allowed = allowed?.map(k => typeof k === 'string' ? Buffer.from(k, 'hex') : k)
 
-    return (remotePublicKey) => {
+    return async (remotePublicKey) => {
       if (allowed && !libKeys.checkAllowList(allowed, remotePublicKey)) {
         return true
       }
 
+      await this.caller._pStartupFinished
       return false
     }
   }
@@ -383,21 +383,10 @@ class NetFacility extends Base {
       ? [...(allow || []), ...(allowReadOnly || [])]
       : null
 
-    const options = {
+    const server = this.rpc.createServer({
       firewall: this.buildFirewall(allowedPeers),
       ...serverOpts
-    }
-    const { rpcServerReady } = this.opts
-    if (rpcServerReady) {
-      const { firewall } = options
-      options.firewall = async (...args) => {
-        if (firewall && await firewall(...args)) return true
-        await rpcServerReady()
-        return false
-      }
-    }
-
-    const server = this.rpc.createServer(options)
+    })
 
     await server.listen()
 
