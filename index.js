@@ -310,20 +310,21 @@ class NetFacility extends Base {
   }
 
   /**
-   * Builds a `@hyperswarm/rpc` firewall predicate. The returned function returns
-   * `true` to reject a peer and `false` to allow it.
+   * Builds a `@hyperswarm/rpc` firewall predicate. The returned function resolves `true` to reject
+   * a peer and `false` to allow it. Allowed peers wait until `caller._pStartupFinished` resolves, when set.
    * @param {Array<Buffer|string>|null} allowed - allow-list of peer publicKeys; `null` disables filtering
-   * @returns {function(Buffer, Object): boolean}
+   * @returns {function(Buffer, Object): Promise<boolean>}
    */
   buildFirewall (allowed) {
     // convert keys to Buffer if string
     allowed = allowed?.map(k => typeof k === 'string' ? Buffer.from(k, 'hex') : k)
 
-    return (remotePublicKey) => {
+    return async (remotePublicKey) => {
       if (allowed && !libKeys.checkAllowList(allowed, remotePublicKey)) {
         return true
       }
 
+      await this.caller._pStartupFinished
       return false
     }
   }
