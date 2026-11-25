@@ -24,8 +24,8 @@
     "async": "^3.2.1",
     "debug": "^4.3.4",
     "hyper-cmd-lib-keys": "^0.1.0",
-    "hyperdht": "^6.13.1",
-    "hyperswarm": "^4.7.14",
+    "hyperdht": "^6.37.0",
+    "hyperswarm": "^4.17.2",
     "lru": "^3.1.0"
   },
   "engines": {
